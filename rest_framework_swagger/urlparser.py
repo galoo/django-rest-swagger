@@ -9,7 +9,7 @@ from rest_framework_swagger.apidocview import APIDocView
 
 class UrlParser(object):
 
-    def get_apis(self, patterns=None, filter_path=None, exclude_namespaces=[]):
+    def get_apis(self, patterns=None, filter_path=None, exclude_namespaces=[], resource_url_prefix=None):
         """
         Returns all the DRF APIViews found in the project URLs
 
@@ -21,7 +21,7 @@ class UrlParser(object):
             patterns = urls.urlpatterns
 
         if filter_path is not None:
-            return self.get_filtered_apis(patterns, filter_path)
+            return self.get_filtered_apis(patterns, filter_path, resource_url_prefix)
 
         patterns = self.__flatten_patterns_tree__(
             patterns,
@@ -31,11 +31,11 @@ class UrlParser(object):
 
         return patterns
 
-    def get_filtered_apis(self, patterns, filter_path):
+    def get_filtered_apis(self, patterns, filter_path, resource_url_prefix):
         filtered_list = []
 
         all_apis = self.get_apis(patterns, exclude_namespaces=[])
-        top_level_apis = self.get_top_level_apis(all_apis)
+        top_level_apis = self.get_top_level_apis(all_apis, resource_url_prefix)
         top_level_apis.discard(filter_path)
 
         for top in list(top_level_apis):
@@ -53,7 +53,7 @@ class UrlParser(object):
 
         return filtered_list
 
-    def get_top_level_apis(self, apis):
+    def get_top_level_apis(self, apis, resource_url_prefix):
         """
         Returns the 'top level' APIs (ie. swagger 'resources')
 
@@ -66,6 +66,9 @@ class UrlParser(object):
             #  If a URLs /resource/ and /resource/{pk} exist, use the base
             #  as the resource. If there is no base resource URL, then include
             path_base = path.split('/{')[0]
+            if resource_url_prefix is not None:
+                path_base = path_base.replace(resource_url_prefix, '', 1)
+                path_base = path_base.split('/')[0]
             if '{' in path and path_base in api_paths:
                 continue
             root_paths.add(path_base)
